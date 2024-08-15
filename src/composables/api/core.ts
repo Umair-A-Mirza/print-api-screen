@@ -18,8 +18,7 @@ const request = async (url: string, method = 'GET', body = {}, headers = {}) => 
       Accept: 'application/json',
       'User-ID': USER_ID,
       'API-Secret': API_KEY
-    },
-    mode: 'no-cors'
+    }
   }
   if (Object.keys(body).length) {
     Object.assign(options, {
