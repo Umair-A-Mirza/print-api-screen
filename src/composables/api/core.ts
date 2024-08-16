@@ -56,7 +56,8 @@ export const useApi = (resource = '') => {
    */
   const get = async (id: string, additional: string = '') => {
     if (!id) {
-      return request(`${BASE_URL}${'/' + resource}`, 'GET')
+      let add = additional ? '/' + additional : ''
+      return request(`${BASE_URL}${'/' + resource + add}`, 'GET')
     }
     return request(`${BASE_URL}${'/' + resource}/${id + additional}`, 'GET')
   }
