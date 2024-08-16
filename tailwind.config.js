@@ -3,7 +3,12 @@ export default {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      
+      fontFamily: {
+        normal: ['Montserrat', 'sans-serif']
+      },
+      colors: {
+        secondary: '#f70548'
+      }
     }
   },
   plugins: []
