@@ -3,6 +3,7 @@ import { useFlyerData } from '../composables/utils/data'
 import { ref, onMounted } from 'vue'
 import MetaDetails from '../components/MetaDetails.vue'
 import FormSection from '../components/FormSection.vue'
+import DimensionsInput from '../components/DimensionsInput.vue'
 import type FlyerAttributes from '../types/FlyerAttributes'
 
 const accessData = ref(null)
@@ -11,7 +12,7 @@ const getPrices = ref(null)
 const error = ref(false)
 
 const flyerCat = ref(null)
-const attributes = ref(null | FlyerAttributes)
+const attributes = ref<FlyerAttributes>(null)
 const combinations = ref(null)
 
 onMounted(async () => {
@@ -37,6 +38,14 @@ onMounted(async () => {
     console.error('Failed to load data', err)
   }
 })
+
+const width = () => {
+  return attributes.value['Custom width'][0]
+}
+
+const height = () => {
+  return attributes.value['Custom height'][0]
+}
 </script>
 
 <template>
@@ -48,13 +57,19 @@ onMounted(async () => {
           <MetaDetails label="Name" :data="flyerCat.name" />
           <MetaDetails label="Date Modified" :data="flyerCat.combinationsModifiedAt.split(' ')[0]" />
         </div>
-        <p class="text-center text-sm font-bold text-gray-500">
-          Please select from the options below to see available prices.
-        </p>
+        <p class="text-center text-sm font-bold">Please select from the options below to see available prices.</p>
         <div class="mt-8 flex flex-col bg-slate-100">
           <FormSection
-            text="Select The Dimensions"
+            text="1 - Select Dimensions"
             subtext="Please select the dimensions of the flyer and then proceed to the next section."
+          />
+          <div class="grid max-w-full grid-cols-2 gap-4 px-4 py-4">
+            <DimensionsInput label="Custom Width" :dimensions="width()" />
+            <DimensionsInput label="Custom Height" :dimensions="height()" />
+          </div>
+          <FormSection
+            text="2 - Select Additional Parameters"
+            subtext="Please make selections for the attributes below and then submit to see the prices."
           />
         </div>
       </div>
