@@ -28,6 +28,8 @@ const validSubmissions = ref(0)
 const custom = ref(false)
 const prices = ref<Price[]>([])
 
+const refresh = ref<Function>()
+
 const width = () => {
   return attributes.value ? attributes.value['Custom width'][0] : null
 }
@@ -105,13 +107,17 @@ watch(validSubmissions, (newVal) => {
  */
 onMounted(async () => {
   try {
-    const result = await useFlyerData()
+    const result = useFlyerData()
+    // TODO: Add logic here to determine if the database needs to be updated (new query to API), or the data we use comes from the database.
+
+    refresh.value = result.refresh
+    await refresh.value()
     // Destructure into new variables.
     const { flyerCat: fc, attributes: attr, combinations: comb } = result.accessData()
 
     flyerCat.value = fc.value
-    attributes.value = attr
-    combinations.value = comb
+    attributes.value = attr.value
+    combinations.value = comb.value
 
     loaded.value = result.loaded.value
     getPrices.value = result.getPrices

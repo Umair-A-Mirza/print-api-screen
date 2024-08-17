@@ -8,7 +8,7 @@ import ProductContainer from '../../types/combinations/product_container'
 import SelectedAttribute from '../../types/combinations/selected_attribute'
 import Price from '../../types/combinations/price'
 
-export const useFlyerData = async () => {
+export const useFlyerData = () => {
   const { getCategories } = useCategories()
   const { getAttributes } = useAttributes()
   const { getCombinations } = useCombinations()
@@ -17,32 +17,40 @@ export const useFlyerData = async () => {
   const loaded = ref(false)
   const error = ref(false)
 
-  const categories: Category[] = await getCategories('', '/categories')
+  const attributes = ref<FlyerAttributes>()
+  const combinations = ref<ProductContainer[]>([])
 
-  if (!categories) {
-    error.value = true
+  /**
+   * Fetches data from the API and processes it to be used in the application.
+   */
+  const refresh = async () => {
+    const categories: Category[] = await getCategories('', '/categories')
+
+    if (!categories) {
+      error.value = true
+    }
+
+    flyerCat.value = categories.find((cat: Category) => cat.name === 'Flyers') as Category
+
+    if (!flyerCat.value || !(Object.keys(flyerCat.value).length > 0)) {
+      error.value = true
+    }
+    const id = flyerCat.value.sku
+
+    attributes.value = await getAttributes(id, '/attributes')
+
+    if (!attributes) {
+      error.value = true
+    }
+
+    combinations.value = await getCombinations(id, '/combinations')
+
+    if (!combinations) {
+      error.value = true
+    }
+
+    loaded.value = true
   }
-
-  flyerCat.value = categories.find((cat: Category) => cat.name === 'Flyers') as Category
-
-  if (!flyerCat.value || !(Object.keys(flyerCat.value).length > 0)) {
-    error.value = true
-  }
-  const id = flyerCat.value.sku
-
-  const attributes: FlyerAttributes = await getAttributes(id, '/attributes')
-
-  if (!attributes) {
-    error.value = true
-  }
-
-  const combinations: ProductContainer[] = await getCombinations(id, '/combinations')
-
-  if (!combinations) {
-    error.value = true
-  }
-
-  loaded.value = true
 
   const accessData = () => {
     return { flyerCat, attributes, combinations }
@@ -54,7 +62,7 @@ export const useFlyerData = async () => {
    * @returns Price[] The prices of the product based on the selected attributes.
    */
   const getPrices = (userAttributes: SelectedAttribute[]): Price[] => {
-    return combinations
+    return combinations.value
       .filter((container: ProductContainer) => {
         const productAttrs = container.product.attributes
 
@@ -74,5 +82,5 @@ export const useFlyerData = async () => {
       .flatMap((container: ProductContainer) => container.product.prices)
   }
 
-  return { accessData, loaded, getPrices, error }
+  return { refresh, accessData, loaded, getPrices, error }
 }
