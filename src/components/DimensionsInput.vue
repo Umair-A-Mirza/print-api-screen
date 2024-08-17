@@ -1,15 +1,35 @@
 <script lang="ts" setup>
-import { computed, defineProps, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type Dimensions from '../types/products/dimensions.ts'
+import SelectedAttribute from '../types/combinations/selected_attribute.ts'
 
-const props = defineProps<{ label: String; dimensions: Dimensions }>()
+const props = defineProps<{ label: String; dimensions: Dimensions; submit: boolean; original: String }>()
+const emits = defineEmits(['submit', 'invalid'])
 
 const inputValue = ref('')
 
 const valid = computed(() => {
   const value = Number(inputValue.value)
-  return value >= props.dimensions.minimum && value <= props.dimensions.maximum
+  const inRange = value >= props.dimensions.minimum && value <= props.dimensions.maximum
+  const tolerance = 0.0001 // Randomly tested and found this to be the best value.
+  const isDivisible =
+    Math.abs(value % props.dimensions.increment) < tolerance ||
+    Math.abs((value % props.dimensions.increment) - props.dimensions.increment) < tolerance
+  return inRange && isDivisible
 })
+
+watch(
+  () => props.submit,
+  (value: boolean) => {
+    if (value) {
+      if (valid.value) {
+        emits('submit', { attribute: props.original, value: inputValue.value } as SelectedAttribute)
+      } else {
+        emits('invalid')
+      }
+    }
+  }
+)
 </script>
 
 <template>
@@ -74,6 +94,6 @@ const valid = computed(() => {
 
 <style scoped>
 .input-focus {
-  transition: box-shadow 0.4s ease-in-out;
+  transition: box-shadow 0.3s ease-in-out;
 }
 </style>
