@@ -12,6 +12,7 @@ export const useFlyerData = async () => {
   const { getCategories } = useCategories()
   const { getAttributes } = useAttributes()
   const { getCombinations } = useCombinations()
+
   const flyerCat = ref<Category>({ name: '', sku: '', combinationsModifiedAt: '' })
   const loaded = ref(false)
   const error = ref(false)

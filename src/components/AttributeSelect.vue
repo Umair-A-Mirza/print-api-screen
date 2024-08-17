@@ -5,9 +5,23 @@ const props = defineProps<{
   data: [string, Array<string | number>]
   submit: boolean
 }>()
-const emits = defineEmits(['submit', 'invalid'])
+const emits = defineEmits(['submit', 'invalid', 'show', 'hide'])
 
 const selectedValue = ref('')
+const isFormat = props.data[0] === 'Format'
+
+if (isFormat) {
+  watch(
+    () => selectedValue.value,
+    (value: string) => {
+      if (value.includes('Custom')) {
+        emits('show')
+      } else {
+        emits('hide')
+      }
+    }
+  )
+}
 
 watch(
   () => props.submit,
