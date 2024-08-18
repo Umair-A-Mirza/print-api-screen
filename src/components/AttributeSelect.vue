@@ -10,6 +10,9 @@ const emits = defineEmits(['submit', 'invalid', 'show', 'hide'])
 const selectedValue = ref('')
 const isFormat = props.data[0] === 'Format'
 
+/**
+ * If the attribute is 'Format', we need to watch in order to emit events to show/hide the 'Custom' input.
+ */
 if (isFormat) {
   watch(
     () => selectedValue.value,
@@ -23,6 +26,9 @@ if (isFormat) {
   )
 }
 
+/**
+ * Watch for the 'submit' prop to emit the relevant events.
+ */
 watch(
   () => props.submit,
   (value: boolean) => {
@@ -36,15 +42,39 @@ watch(
   }
 )
 
+/**
+ * Hardcoded name for 'quantity' attribute as it is lowercase in the API (inconsistent).
+ */
 const name = () => {
   return props.data[0] === 'quantity' ? 'Quantity' : props.data[0]
 }
 
 /**
- * The data for 'quantity' is duplicated for some reason, from the API itself.
+ * Utility method to ensure that weights are in ascending order (e.g. 1 Gr, 2 Gr, 3 Gr).
+ */
+const order = (a: number, b: number) => {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+/**
+ * Method to handle duplication of 'Quantity' attribute values from the API.
  */
 const data = () => {
-  return name() === 'Quantity' ? Array.from(new Set(props.data[1])) : props.data[1]
+  const n = name()
+  if (n === 'Quantity') {
+    return Array.from(new Set(props.data[1]))
+  } else if (n === 'Weight') {
+    // Final .map() is to convert the object { value: ..., unit: ... } to a string, as was before.
+    return props.data[1]
+      .map((weight) => {
+        weight = typeof weight === 'number' ? `${weight} Gr` : weight
+        const [value, unit] = weight.split(' ')
+        return { value: parseInt(value), unit }
+      })
+      .sort((a, b) => order(a.value, b.value))
+      .map((item) => `${item.value} ${item.unit}`)
+  }
+  return props.data[1]
 }
 </script>
 

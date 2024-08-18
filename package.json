@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.8.2",
+    "firebase": "^10.13.0",
+    "pako": "^2.1.0",
     "vue": "^3.4.35"
   },
   "devDependencies": {
