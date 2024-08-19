@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { useFlyerData } from '../composables/utils/data'
 import { ref, onMounted, computed, watch } from 'vue'
-import type FlyerAttributes from '../types/products/flyer/flyer'
-import type Category from '../types/categories/category'
-import type ProductContainer from '../types/combinations/product_container'
 import type SelectedAttribute from '../types/combinations/selected_attribute'
 import type Price from '../types/combinations/price'
 import type CustomPrice from '../types/custom/custom_price'
@@ -15,11 +12,6 @@ import PriceRow from '../components/PriceRow.vue'
 import CustomPriceRow from '../components/CustomPriceRow.vue'
 
 /**
- * loaded - Boolean value to determine if the data has been loaded from the API.
- * error - Boolean value to determine if an error occurred while loading the data.
- * flyerCat - The metadata of the product (flyer in this case).
- * attributes - The attributes of the product (flyer).
- * combinations - The combinations of the product (flyer).
  * selectedAttributes - The attributes selected by the user.
  * submit - Boolean value to determine if the user has submitted the form.
  * complete - Boolean value to determine if the submission process is completed successfully.
@@ -27,19 +19,9 @@ import CustomPriceRow from '../components/CustomPriceRow.vue'
  * custom - Boolean value to determine if the user will make a custom request (a custom request differs from a standard request as it will have custom dimensions).
  * prices - The prices of the product based on the selected attributes.
  * customPrice - The price of the product based on the custom dimensions.
- * refresh - Function to refresh the data from the API.
- * loadDataFromDB - Function to load the data from the database.
- * updateDB - Function to update the database with the new data.
- * getPrices - Function to get the prices based on the selected attributes.
- * getCustomPrice - Function to get the price based on the custom dimensions.
  * exclude - Array of attributes to exclude if performing a standard request (attributes specific to a custom request).
  */
 
-const loaded = ref(false)
-const error = ref(false)
-const flyerCat = ref<Category>()
-const attributes = ref<FlyerAttributes>()
-const combinations = ref<ProductContainer[]>([])
 const selectedAttributes = ref<SelectedAttribute[]>([])
 const submit = ref(false)
 const complete = ref(false)
@@ -47,12 +29,11 @@ const validSubmissions = ref(0)
 const custom = ref(false)
 const prices = ref<Price[]>([])
 const customPrice = ref<CustomPrice>()
-const refresh = ref<Function>()
-const loadDataFromDB = ref<Function>()
-const updateDB = ref<Function>()
-const getPrices = ref<Function>()
-const getCustomPrice = ref<Function>()
 const exclude = ['Custom width', 'Custom height', 'quantity']
+
+const result = useFlyerData()
+
+const { flyerCat, attributes } = result.accessData()
 
 /**
  *Checks if the 'Custom width' attribute exists on the attributes object. Used to render the custom dimensions input fields.
@@ -145,26 +126,22 @@ const fetchPrices = async () => {
   if (custom.value) {
     if (attributes.value && validSubmissions.value === Object.keys(attributes.value).length) {
       complete.value = true
-      if (typeof getCustomPrice?.value === 'function') {
-        try {
-          customPrice.value = await getCustomPrice.value(selectedAttributes.value)
-        } catch (error) {
-          console.error('Error fetching custom price:', error)
-        }
-        cancel()
+      try {
+        customPrice.value = await result.getCustomPrice(selectedAttributes.value)
+      } catch (error) {
+        console.error('Error fetching custom price:', error)
       }
+      cancel()
     }
   } else {
     if (validSubmissions.value === Object.keys(remainingAttributes.value).length) {
       complete.value = true
-      if (typeof getPrices?.value === 'function') {
-        try {
-          prices.value = await getPrices.value(selectedAttributes.value)
-        } catch (error) {
-          console.error('Error fetching prices:', error)
-        }
-        cancel()
+      try {
+        prices.value = await result.getPrices(selectedAttributes.value)
+      } catch (error) {
+        console.error('Error fetching prices:', error)
       }
+      cancel()
     }
   }
 }
@@ -175,40 +152,23 @@ const fetchPrices = async () => {
 watch(validSubmissions, fetchPrices)
 
 /**
+ * Watcher to inform users if there is an unforeseen error.
+ */
+watch(result.error, (newVal) => {
+  if (newVal) {
+    alert('There was an error performing this task.')
+  }
+})
+
+/**
  * The data is loaded from the database when the component is mounted. Then, the variables are set with respect to the incoming data.
  */
 onMounted(async () => {
   try {
-    const result = useFlyerData()
+    // If we could use DB without size issue -
+    // await result.loadDataFromDB()
 
-    refresh.value = result.refresh
-    loadDataFromDB.value = result.loadDataFromDB
-    updateDB.value = result.updateDB
-
-    await refresh.value()
-
-    // Destructure into new variables.
-    const { flyerCat: fc, attributes: attr, combinations: comb } = result.accessData()
-
-    flyerCat.value = fc.value
-    attributes.value = attr.value
-    combinations.value = comb.value
-
-    loaded.value = result.loaded.value
-    getPrices.value = result.getPrices
-    error.value = result.error.value
-    getCustomPrice.value = result.getCustomPrice
-
-    // TODO: Determine how to compress the data to be stored in the database.
-
-    // await updateDB.value({ flyerCat: flyerCat.value, attributes: attributes.value, combinations: combinations.value })
-    // await loadDataFromDB.value()
-
-    if (loaded.value && !error.value) {
-      console.log('Data Loaded Successfully')
-    } else {
-      console.error('Data not loaded yet')
-    }
+    await result.refresh()
   } catch (err) {
     console.error('Failed to load data', err)
   }
@@ -216,7 +176,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <template v-if="loaded && !error">
+  <template v-if="result.loaded.value && !result.error.value">
     <div class="box-border flex w-full items-center justify-center pt-16 font-normal">
       <div class="border-outline m-6 flex max-w-[1200px] flex-col rounded-lg border-2 border-slate-200 py-6 shadow-lg">
         <p class="pb-4 text-center text-3xl">Product Configuration and Price Menu</p>

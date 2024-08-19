@@ -11,7 +11,6 @@ import type SelectedAttribute from "../../types/combinations/selected_attribute"
 import type Price from "../../types/combinations/price";
 import type FlyerPriceRow from "../../types/db/flyer_price_row";
 import type FlyerPriceRowDecompressed from "../../types/db/flyer_price_row_decompressed";
-import type Data from "../../types/db/data";
 import type CustomPrice from "../../types/custom/custom_price";
 import { db } from "../../firebase";
 import {
@@ -29,22 +28,27 @@ export const useFlyerData = () => {
   const { getAttributes } = useAttributes();
   const { getCombinations } = useCombinations();
   const { compress, decompress } = useCompress();
+  const { validProduct } = useCustom();
 
+  /**
+   * loaded - Boolean value to determine if the data has been loaded from the API.
+   * error - Boolean value to determine if an error occurred while loading the data.
+   * flyerCat - The metadata of the product (flyer in this case).
+   * attributes - The attributes of the product (flyer).
+   * combinations - The combinations of the product (flyer).
+   * flyerID - The ID of the flyer product.
+   */
+
+  const loaded = ref(false);
+  const error = ref(false);
   const flyerCat = ref<Category>({
     name: "",
     sku: "",
     combinationsModifiedAt: "",
   });
-  const loaded = ref(false);
-  const error = ref(false);
-
   const attributes = ref<FlyerAttributes>();
   const combinations = ref<ProductContainer[]>([]);
-
-  const dbData = ref<FlyerPriceRowDecompressed[]>([]);
   const flyerID = ref("");
-
-  const { validProduct } = useCustom();
 
   /**
    * Fetches data from the API and processes it to be used in the application.
@@ -81,6 +85,9 @@ export const useFlyerData = () => {
     loaded.value = true;
   };
 
+  /**
+   * Fetches data from the DB to be used in the application.
+   */
   const loadDataFromDB = async () => {
     const q = query(
       collection(db, "flyer_prices"),
@@ -88,23 +95,37 @@ export const useFlyerData = () => {
       limit(1),
     );
 
-    const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((doc) => {
-      const res = { id: doc.id, ...doc.data() } as FlyerPriceRow;
-      const resDec = {
-        id: res.id,
-        created_at: res.created_at,
-        data: decompress(res.data),
-      } as FlyerPriceRowDecompressed;
-      dbData.value.push(resDec);
-    });
-
-    console.log(dbData.value);
+    try {
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const res = { id: doc.id, ...doc.data() } as FlyerPriceRow;
+        const resDec = {
+          id: res.id,
+          created_at: res.created_at,
+          data: decompress(res.data),
+        } as FlyerPriceRowDecompressed;
+        flyerCat.value = resDec.data.flyerCat;
+        attributes.value = resDec.data.attributes;
+        combinations.value = resDec.data.combinations;
+      });
+    } catch (e) {
+      console.error("Error getting documents from DB:", e);
+      error.value = true;
+    }
   };
 
-  const updateDB = async (data: Data) => {
+  /**
+   * Updates the DB with the latest data from the API.
+   */
+  const updateDB = async () => {
     try {
-      const cd = compress(data);
+      const cd = compress(
+        {
+          categories: flyerCat.value,
+          attributes: attributes.value,
+          combinations: combinations.value,
+        },
+      );
       await addDoc(collection(db, "flyer_prices"), {
         data: cd,
         created_at: Timestamp.now(),
@@ -116,6 +137,10 @@ export const useFlyerData = () => {
     }
   };
 
+  /**
+   * This function is called after the data is fetched from the API or the DB in order to expose that data to the application.
+   * @returns The data from the API.
+   */
   const accessData = () => {
     return { flyerCat, attributes, combinations };
   };
@@ -147,6 +172,11 @@ export const useFlyerData = () => {
       .flatMap((container: ProductContainer) => container.product.prices);
   };
 
+  /**
+   * Allows the user to get the  price of a product with custom width, custom height, and quantity based on the selected attributes.
+   * @param attributes The selected attributes.
+   * @returns A promise that resolves to the CustomPrice of the product.
+   */
   const getCustomPrice = async (
     attributes: SelectedAttribute[],
   ): Promise<CustomPrice> => {

@@ -5,7 +5,7 @@ export const useCompress = () => {
     /**
      * Method to compress the data from the API to be added to FireStore DB.
      */
-    const compress = (data: any) => {
+    const compress = (data: any): number[] => {
         const jsonDataString = JSON.stringify(data);
         const compressedData = pako.deflate(jsonDataString);
         return Array.from(compressedData);
